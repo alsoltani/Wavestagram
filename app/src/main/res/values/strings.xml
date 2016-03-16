@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="TypographyDashes">
+    <string name="app_name">Wavestagram</string>
+    <plurals name="likes_count">
+        <item quantity="one">%d like</item>
+        <item quantity="other">%d likes</item>
+    </plurals>
+    <string-array name="user_photos">
+        <item>http://scontent-a-fra.cdninstagram.com/hphotos-xpf1/t51.2885-15/s306x306/e15/10665483_429615813855717_1490926670_n.jpg</item>
+    </string-array>
+    <string name="user_profile_photo">https://scontent-cdg2-1.cdninstagram.com/t51.2885-19/s150x150/12331380_1677895809145248_1640974978_a.jpg</string>
+</resources>
