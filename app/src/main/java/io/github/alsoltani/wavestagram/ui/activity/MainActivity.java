@@ -49,6 +49,7 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         setupFeed();
 
         if (savedInstanceState == null) {
@@ -65,21 +66,20 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
                 return 300;
             }
         };
+        rvFeed.setLayoutManager(linearLayoutManager);
 
         DatabaseHandler handler = DatabaseHandler.getInstance(this);
-        handler.addOrUpdateFile("File 1", "");
-        handler.addOrUpdateFile("File 2", "");
-        handler.addOrUpdateFile("File 3", "");
-        handler.addOrUpdateFile("File 4", "");
-
-        // Get access to the underlying writeable database.
+        //DatabaseHandler handler = new DatabaseHandler(this);
         SQLiteDatabase db = handler.getWritableDatabase();
-        Cursor pictureCursor = db.rawQuery("SELECT  * FROM pictureDatabase", null);
-        pictureCursor.close();
 
-        rvFeed.setLayoutManager(linearLayoutManager); 
+        handler.AddFileOrPass("File 1", "Picture1.png");
+        handler.AddFileOrPass("File 2", "Picture2.png");
+        handler.AddFileOrPass("File 3", "Picture3.png");
+        handler.AddFileOrPass("File 4", "Picture4.png");
 
-        feedAdapter = new FeedAdapter(this);
+        Cursor pictureCursor = db.rawQuery("SELECT * FROM pictureTable", null);
+
+        feedAdapter = new FeedAdapter(this, pictureCursor);
         feedAdapter.setOnFeedItemClickListener(this);
         rvFeed.setAdapter(feedAdapter);
         rvFeed.setOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -161,11 +161,6 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
     @Override
     public void onMoreClick(View v, int itemPosition) {
         FeedContextMenuManager.getInstance().toggleContextMenuFromView(v, itemPosition, this);
-    }
-
-    @Override
-    public void onFeedBottomLongClick(View v){
-        FeedContextMenuManager.getInstance().hideContextMenu();
     }
 
     @Override

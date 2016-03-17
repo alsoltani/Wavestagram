@@ -13,6 +13,8 @@ import android.util.Log;
 
 public class DatabaseHandler extends SQLiteOpenHelper {
 
+    private static DatabaseHandler sInstance;
+
     // All Static variables.
     // Database Version.
     private static final int DATABASE_VERSION = 1;
@@ -21,10 +23,10 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "pictureDatabase";
 
     // Contacts table name.
-    private static final String TABLE_PICTURES = "pictures";
+    private static final String TABLE_PICTURES = "pictureTable";
 
     // Contacts Table Columns names.
-    private static final String KEY_ID = "id";
+    private static final String KEY_ID = "_id";
     private static final String KEY_NAME = "name";
     private static final String KEY_FILENAME = "fileName";
 
@@ -34,8 +36,6 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         public String name;
         public String fileName;
     }
-
-    private static DatabaseHandler sInstance;
 
     public static synchronized DatabaseHandler getInstance(Context context) {
 
@@ -54,6 +54,14 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         //Make a call to the static method "getInstance()" instead.
 
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    }
+
+    // Called when the database connection is being configured.
+    // Configure database settings for things like foreign key support, write-ahead logging, etc.
+    @Override
+    public void onConfigure(SQLiteDatabase db) {
+        super.onConfigure(db);
+        db.setForeignKeyConstraintsEnabled(true);
     }
 
     // Creating Tables.
@@ -83,42 +91,14 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         }
     }
 
-    /*
-    // Insert a picture into the database.
-    public void addPicture(Picture picture) {
-        // Create and/or open the database for writing
-        SQLiteDatabase db = getWritableDatabase();
-
-        // It's a good idea to wrap our insert in a transaction. This helps with performance and ensures
-        // consistency of the database.
-        db.beginTransaction();
-        try {
-            // The user might already exist in the database (i.e. the same user created multiple posts).
-           // long userId = addOrUpdateUser(picture.user);
-
-            ContentValues values = new ContentValues();
-            values.put(KEY_NAME, picture.name);
-            values.put(KEY_FILENAME, picture.fileName);
-
-            // Notice how we haven't specified the primary key. SQLite auto increments the primary key column.
-            db.insertOrThrow(TABLE_PICTURES, null, values);
-            db.setTransactionSuccessful();
-        } catch (Exception e) {
-            Log.d(TAG, "Error while trying to add post to database");
-        } finally {
-            db.endTransaction();
-        }
-    }
-    */
-
     // Insert or update a picture in the database.
     public long addOrUpdateFile(String name, String fileName) {
 
         /* Since SQLite doesn't support "upsert" we need to fall back on an attempt to UPDATE (in case the
-        user already exists) optionally followed by an INSERT (in case the user does not already exist).
+        picture already exists) optionally followed by an INSERT (in case the picture does not already exist).
         Unfortunately, there is a bug with the insertOnConflict method
         (https://code.google.com/p/android/issues/detail?id=13045) so we need to fall back to the more
-        verbose option of querying for the user's primary key if we did an update.
+        verbose option of querying for the picture's primary key if we did an update.
          */
 
         // The database connection is cached so it's not expensive to call getWriteableDatabase() multiple times.
@@ -131,16 +111,16 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             values.put(KEY_NAME, name);
             values.put(KEY_FILENAME, fileName);
 
-            // First try to update the picture in picture the user already exists in the database
+            // First try to update the picture in picture the picture already exists in the database
             // This assumes fileNames are unique.
             int rows = db.update(TABLE_PICTURES, values, KEY_FILENAME + "= ?", new String[]{fileName});
 
             // Check if update succeeded
             if (rows == 1) {
-                // Get the primary key of the user we just updated
-                String usersSelectQuery = String.format("SELECT %s FROM %s WHERE %s = ?",
+                // Get the primary key of the picture we just updated
+                String picturesSelectQuery = String.format("SELECT %s FROM %s WHERE %s = ?",
                         KEY_ID, TABLE_PICTURES, KEY_FILENAME);
-                Cursor cursor = db.rawQuery(usersSelectQuery, new String[]{String.valueOf(fileName)});
+                Cursor cursor = db.rawQuery(picturesSelectQuery, new String[]{String.valueOf(fileName)});
                 try {
                     if (cursor.moveToFirst()) {
                         pictureId = cursor.getInt(0);
@@ -157,10 +137,71 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             }
         } catch (Exception e) {
-            Log.d(TAG, "Error while trying to add or update user");
+            Log.d(TAG, "Error while trying to add or update picture in database");
         } finally {
             db.endTransaction();
         }
         return pictureId;
+    }
+
+    // Insert a picture in the database if there is no previous occurence of it.
+    public void AddFileOrPass(String name, String fileName) {
+
+        SQLiteDatabase db = getWritableDatabase();
+
+        int count = -1;
+        Cursor cursor = null;
+
+        db.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(KEY_NAME, name);
+            values.put(KEY_FILENAME, fileName);
+            
+            String checkIfFileName = String.format("SELECT COUNT(*) FROM %s WHERE %s = ?",
+                    TABLE_PICTURES, KEY_FILENAME);
+            cursor = db.rawQuery(checkIfFileName, new String[]{String.valueOf(fileName)});
+            if (cursor.moveToFirst()) {
+                count = cursor.getInt(0);
+            }
+            
+            if (count <= 0) {
+                db.insertOrThrow(TABLE_PICTURES, null, values);
+                db.setTransactionSuccessful();
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Error while trying to insert picture in database");
+        } finally {
+            if (cursor != null && !cursor.isClosed()) {
+                cursor.close();
+            }
+            db.endTransaction();
+        }
+    }
+
+    //Get number of rows in database.
+    public int GetNumberRows() {
+
+        SQLiteDatabase db = getWritableDatabase();
+
+        int rows = -1;
+        Cursor cursor = null;
+
+        db.beginTransaction();
+        try {
+            String nRowsQuery = String.format("SELECT COUNT(*) FROM %s", TABLE_PICTURES);
+            cursor = db.rawQuery(nRowsQuery, null);
+            if (cursor.moveToFirst()) {
+                rows = cursor.getInt(0);
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Error while trying to count the number of rows");
+        } finally {
+            if (cursor != null && !cursor.isClosed()) {
+                cursor.close();
+            }
+            db.endTransaction();
+        }
+        return rows;
     }
 }

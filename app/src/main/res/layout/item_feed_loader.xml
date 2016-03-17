@@ -39,7 +39,7 @@
         </io.github.alsoltani.wavestagram.ui.view.SquaredFrameLayout>
 
         <ImageView
-            android:id="@+id/ivFeedBottom"
+            android:id="@+id/ivFeedName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 

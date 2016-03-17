@@ -3,13 +3,20 @@ package io.github.alsoltani.wavestagram.ui.adapter;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Environment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.LinearLayoutCompat;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CursorAdapter;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.EditText;
@@ -17,11 +24,13 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import io.github.alsoltani.wavestagram.R;
+import io.github.alsoltani.wavestagram.database.DatabaseHandler;
 import io.github.alsoltani.wavestagram.ui.view.LoadingFeedItemView;
 
 /**
@@ -35,21 +44,32 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final List<FeedItem> feedItems = new ArrayList<>();
 
     private Context context;
+    private CursorAdapter cursorAdapter;
     private OnFeedItemClickListener onFeedItemClickListener;
-
     private boolean showLoadingView = false;
 
-    public FeedAdapter(Context context) {
+    public FeedAdapter(Context context, Cursor cursor) {
         this.context = context;
+        this.cursorAdapter = new CursorAdapter(context, cursor, 0) {
+            @Override
+            public View newView(Context context, Cursor cursor, ViewGroup parent) {
+                return LayoutInflater.from(context).inflate(R.layout.item_feed, parent, false);
+            }
+
+            @Override
+            public void bindView(View view, Context context, Cursor cursor) {
+
+            }
+        };
     }
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         if (viewType == VIEW_TYPE_DEFAULT) {
-            View view = LayoutInflater.from(context).inflate(R.layout.item_feed, parent, false);
+            View view = cursorAdapter.newView(context, cursorAdapter.getCursor(), parent);
             CellFeedViewHolder cellFeedViewHolder = new CellFeedViewHolder(view);
 
-            setupClickableViews(view, cellFeedViewHolder);
+            setupClickableViews(view, cellFeedViewHolder, cursorAdapter.getCursor());
             return cellFeedViewHolder;
         } else if (viewType == VIEW_TYPE_LOADER) {
             LoadingFeedItemView view = new LoadingFeedItemView(context);
@@ -63,7 +83,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         return null;
     }
 
-    private void setupClickableViews(final View view, final CellFeedViewHolder cellFeedViewHolder) {
+    private void setupClickableViews(final View view, final CellFeedViewHolder cellFeedViewHolder, final Cursor cursor) {
 
         cellFeedViewHolder.btnMore.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -74,7 +94,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
         });
 
-        cellFeedViewHolder.ivFeedBottom.setOnLongClickListener(
+        cellFeedViewHolder.ivFeedName.setOnLongClickListener(
                 new View.OnLongClickListener() {
 
                     @Override
@@ -101,17 +121,21 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                                                     DialogInterface dialog,
                                                     int id) {
 
-                                                /*
-                                                * Get user input,
-                                                * and set it to result.
-                                                * */
+                                                //Get user input, and set it to result.
 
-                                                cellFeedViewHolder.ivFeedBottom.setText(userInput
-                                                        .getText());
+                                                CharSequence userInputText = userInput.getText();
+                                                cellFeedViewHolder.ivFeedName.setText(userInputText);
 
-                                                /*
-                                                * Insert or update name in database.
-                                                * */
+                                                // Update name in database.
+                                                //TODO: check for updates in database when relaunching app.
+
+                                                Log.v("AddOrUpdateFile", String.valueOf(cellFeedViewHolder.getAdapterPosition()));
+
+                                                DatabaseHandler handler = DatabaseHandler.getInstance(context);
+
+                                                handler.addOrUpdateFile(
+                                                        userInputText.toString(),
+                                                        cellFeedViewHolder.ivFeedFileName.getText().toString());
                                             }
                                         })
                                 .setNegativeButton("Cancel",
@@ -161,7 +185,9 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder viewHolder, int position) {
-        ((CellFeedViewHolder) viewHolder).bindView(feedItems.get(position));
+
+        cursorAdapter.getCursor().moveToPosition(position);
+        ((CellFeedViewHolder) viewHolder).bindView(feedItems.get(position), cursorAdapter.getCursor());
 
         if (getItemViewType(position) == VIEW_TYPE_LOADER) {
             bindLoadingFeedItem((LoadingCellFeedViewHolder) viewHolder);
@@ -195,13 +221,14 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     public void updateItems(boolean animated) {
 
+        DatabaseHandler handler = DatabaseHandler.getInstance(context);
+        int length = handler.GetNumberRows();
+
+        List<FeedItem> updateList = new ArrayList<FeedItem>(
+                Collections.nCopies(length, new FeedItem("Image 1", "fileName 1")));
+
         feedItems.clear();
-        feedItems.addAll(Arrays.asList(
-                new FeedItem("Image 1"),
-                new FeedItem("Image 2"),
-                new FeedItem("Image 3"),
-                new FeedItem("Image 4")
-        ));
+        feedItems.addAll(updateList);
 
         //Make sure elements show up at first.
         if (animated) {
@@ -223,8 +250,10 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public static class CellFeedViewHolder extends RecyclerView.ViewHolder {
         @Bind(R.id.ivFeedCenter)
         ImageView ivFeedCenter;
-        @Bind(R.id.ivFeedBottom)
-        TextView ivFeedBottom;
+        @Bind(R.id.ivFeedName)
+        TextView ivFeedName;
+        @Bind(R.id.ivFeedFileName)
+        TextView ivFeedFileName;
         @Bind(R.id.btnMore)
         ImageButton btnMore;
 
@@ -235,11 +264,21 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             ButterKnife.bind(this, view);
         }
 
-        public void bindView(FeedItem feedItem) {
+        public void bindView(FeedItem feedItem, Cursor cursor) {
+
             this.feedItem = feedItem;
-            int adapterPosition = getAdapterPosition();
-            ivFeedCenter.setImageResource(adapterPosition % 2 == 0 ? R.drawable.img_feed_center_1 : R.drawable.img_feed_center_2);
-            ivFeedBottom.setText(adapterPosition % 2 == 0 ? "Text 1." : "Text 2 !");
+            int adapterPosition = cursor.getPosition();
+            //TODO: Avoid hardcoding the galleryPath
+
+            String galleryPath = System.getenv("SECONDARY_STORAGE")
+            + "/" + Environment.DIRECTORY_PICTURES +
+            "/Wavestagram/";
+
+            Bitmap bmImage = BitmapFactory.decodeFile(galleryPath + cursor.getString(cursor.getColumnIndex("fileName")));
+            ivFeedCenter.setImageBitmap(bmImage);
+            //ivFeedCenter.setImageResource(adapterPosition % 2 == 0 ? R.drawable.img_feed_center_1 : R.drawable.img_feed_center_2);
+            ivFeedName.setText(cursor.getString(cursor.getColumnIndex("name")));
+            ivFeedFileName.setText(cursor.getString(cursor.getColumnIndex("fileName")));
         }
 
     }
@@ -254,26 +293,26 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
 
         @Override
-        public void bindView(FeedItem feedItem) {
-            super.bindView(feedItem);
+        public void bindView(FeedItem feedItem, Cursor cursor) {
+            super.bindView(feedItem, cursor);
         }
     }
 
     public static class FeedItem {
 
         public String name;
+        public String fileName;
 
-        public FeedItem(String name) {
+        public FeedItem(String name, String fileName) {
             this.name = name;
+            this.fileName = fileName;
         }
     }
 
 
     public interface OnFeedItemClickListener {
 
-        void onMoreClick(View v, int position);
-
-        void onFeedBottomLongClick(View v);
+        void onMoreClick(View v, int position); 
 
     }
 }
