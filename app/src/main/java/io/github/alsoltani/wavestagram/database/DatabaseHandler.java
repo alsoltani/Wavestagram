@@ -145,7 +145,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     // Insert a picture in the database if there is no previous occurence of it.
-    public void AddFileOrPass(String name, String fileName) {
+    public void addFileOrPass(String name, String fileName) {
 
         SQLiteDatabase db = getWritableDatabase();
 
@@ -178,6 +178,41 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             db.endTransaction();
         }
     }
+
+    //Delete picture from the database.
+    /*public void deleteFile(String name, String fileName) {
+
+        SQLiteDatabase db = getWritableDatabase();
+
+        int count = -1;
+        Cursor cursor = null;
+
+        db.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(KEY_NAME, name);
+            values.put(KEY_FILENAME, fileName);
+
+            String checkIfFileName = String.format("SELECT COUNT(*) FROM %s WHERE %s = ?",
+                    TABLE_PICTURES, KEY_FILENAME);
+            cursor = db.rawQuery(checkIfFileName, new String[]{String.valueOf(fileName)});
+            if (cursor.moveToFirst()) {
+                count = cursor.getInt(0);
+            }
+
+            if (count <= 0) {
+                db.insertOrThrow(TABLE_PICTURES, null, values);
+                db.setTransactionSuccessful();
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Error while trying to insert picture in database");
+        } finally {
+            if (cursor != null && !cursor.isClosed()) {
+                cursor.close();
+            }
+            db.endTransaction();
+        }
+    }*/
 
     //Get number of rows in database.
     public int GetNumberRows() {

@@ -46,7 +46,7 @@ public class FeedContextMenu extends LinearLayout {
         ((ViewGroup) getParent()).removeView(FeedContextMenu.this);
     }
 
-    @OnClick(R.id.btnReport)
+    @OnClick(R.id.btnDelete)
     public void onDeleteClick() {
         if (onItemClickListener != null) {
             onItemClickListener.onDeleteClick(feedItem);

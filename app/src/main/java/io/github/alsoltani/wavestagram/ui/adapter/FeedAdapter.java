@@ -74,8 +74,8 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         } else if (viewType == VIEW_TYPE_LOADER) {
             LoadingFeedItemView view = new LoadingFeedItemView(context);
             view.setLayoutParams(new LinearLayoutCompat.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT)
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT)
             );
             return new LoadingCellFeedViewHolder(view);
         }
@@ -127,7 +127,6 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                                                 cellFeedViewHolder.ivFeedName.setText(userInputText);
 
                                                 // Update name in database.
-                                                //TODO: check for updates in database when relaunching app.
 
                                                 Log.v("AddOrUpdateFile", String.valueOf(cellFeedViewHolder.getAdapterPosition()));
 
@@ -208,7 +207,9 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     @Override
     public int getItemViewType(int position) {
         if (showLoadingView && position == 0) {
-            return VIEW_TYPE_LOADER;
+
+            return VIEW_TYPE_DEFAULT;
+            //return VIEW_TYPE_LOADER;
         } else {
             return VIEW_TYPE_DEFAULT;
         }
@@ -312,7 +313,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     public interface OnFeedItemClickListener {
 
-        void onMoreClick(View v, int position); 
+        void onMoreClick(View v, int position);
 
     }
 }

@@ -72,12 +72,12 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
         //DatabaseHandler handler = new DatabaseHandler(this);
         SQLiteDatabase db = handler.getWritableDatabase();
 
-        handler.AddFileOrPass("File 1", "Picture1.png");
-        handler.AddFileOrPass("File 2", "Picture2.png");
-        handler.AddFileOrPass("File 3", "Picture3.png");
-        handler.AddFileOrPass("File 4", "Picture4.png");
+        handler.addFileOrPass("File 1", "Picture1.png");
+        handler.addFileOrPass("File 2", "Picture2.png");
+        handler.addFileOrPass("File 3", "Picture3.png");
+        handler.addFileOrPass("File 4", "Picture4.png");
 
-        Cursor pictureCursor = db.rawQuery("SELECT * FROM pictureTable", null);
+        Cursor pictureCursor = db.rawQuery("SELECT * FROM pictureTable ORDER BY _id DESC", null);
 
         feedAdapter = new FeedAdapter(this, pictureCursor);
         feedAdapter.setOnFeedItemClickListener(this);
@@ -166,6 +166,9 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
     @Override
     public void onDeleteClick(int feedItem) {
         FeedContextMenuManager.getInstance().hideContextMenu();
+
+        //DatabaseHandler handler = DatabaseHandler.getInstance(this);
+
         showDeletedSnackbar();
     }
 

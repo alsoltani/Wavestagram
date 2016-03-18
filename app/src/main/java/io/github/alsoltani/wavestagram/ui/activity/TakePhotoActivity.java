@@ -13,9 +13,11 @@ import android.hardware.Camera;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.animation.AccelerateInterpolator;
@@ -156,7 +158,20 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
 
     @OnClick(R.id.btnAccept)
     public void onAcceptClick() {
+        Log.v("PhotoPath", Uri.fromFile(photoPath).toString());
         PublishActivity.openWithPhotoUri(this, Uri.fromFile(photoPath));
+    }
+
+    @OnClick(R.id.btnBack)
+    public void onBackPressed() {
+        if (currentState == STATE_SETUP_PHOTO) {
+            btnTakePhoto.setEnabled(true);
+            vUpperPanel.showNext();
+            vLowerPanel.showNext();
+            updateState(STATE_TAKE_PHOTO);
+        } else {
+            super.onBackPressed();
+        }
     }
 
     private void animateShutter() {
@@ -208,6 +223,31 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
     class MyCameraHost extends SimpleCameraHost {
 
         private Camera.Size previewSize;
+        private File photoDirectory;
+
+        //Rewrite all classes using PhotoDirectory,
+        //so that MyCameraHost uses the dedicated dir to store images.
+
+        private void initPhotoDirectory() {
+            photoDirectory = new File(System.getenv("SECONDARY_STORAGE")
+                    + "/" + Environment.DIRECTORY_PICTURES +
+                    "/Wavestagram/");
+        }
+
+        protected File getPhotoPath() {
+            File dir = getPhotoDirectory();
+            dir.mkdirs();
+
+        return(new File(dir, getPhotoFilename()));
+        }
+
+        protected File getPhotoDirectory() {
+            if (photoDirectory == null) {
+                initPhotoDirectory();
+            }
+
+        return(photoDirectory);
+        }
 
         public MyCameraHost(Context ctxt) {
             super(ctxt);
@@ -244,6 +284,7 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
         public void saveImage(PictureTransaction xact, byte[] image) {
             super.saveImage(xact, image);
             photoPath = getPhotoPath();
+
         }
     }
 
@@ -252,18 +293,6 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
         vLowerPanel.showNext();
         ivTakenPhoto.setImageBitmap(bitmap);
         updateState(STATE_SETUP_PHOTO);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (currentState == STATE_SETUP_PHOTO) {
-            btnTakePhoto.setEnabled(true);
-            vUpperPanel.showNext();
-            vLowerPanel.showNext();
-            updateState(STATE_TAKE_PHOTO);
-        } else {
-            super.onBackPressed();
-        }
     }
 
     private void updateState(int state) {
