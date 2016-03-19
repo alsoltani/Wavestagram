@@ -74,9 +74,8 @@
                     android:layout_weight="1" />
 
                 <ImageButton
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:maxHeight="72dp"
+                    android:layout_width="103dp"
+                    android:layout_height="40dp"
                     android:scaleType="fitCenter"
                     android:background="@drawable/btn_default_light"
                     android:src="@drawable/ic_gaussian_white_24dp" />
