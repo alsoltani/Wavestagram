@@ -12,7 +12,7 @@ import android.view.animation.OvershootInterpolator;
 import io.github.alsoltani.wavestagram.Utils;
 
 /**
- * Created by alsoltani_mcs on 16.12.14.
+ * Created by alsoltani on 16.12.14.
  */
 public class FeedContextMenuManager extends RecyclerView.OnScrollListener implements View.OnAttachStateChangeListener {
 

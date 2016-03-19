@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.ToolbarWidgetWrapper;
 import android.util.Log;
 import android.view.Menu;
@@ -60,7 +61,26 @@ public class PublishActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_publish);
         setSupportActionBar(toolbar);
-        //toolbar.setNavigationIcon(R.drawable.ic_arrow_back_grey600_24dp);
+        toolbar.setNavigationIcon(R.drawable.ic_arrow_back_grey600_24dp);
+        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                int[] startingLocation = new int[2];
+                view.getLocationOnScreen(startingLocation);
+                startingLocation[0] += toolbar.getWidth() / 2;
+
+                Intent intent = new Intent(view.getContext(), TakePhotoActivity.class);
+                intent.putExtra(TakePhotoActivity.ARG_REVEAL_START_LOCATION, startingLocation);
+                intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+
+                overridePendingTransition(0, 0);
+
+                new File(photoUri.toString()).delete();
+            }
+        });
+
         photoSize = getResources().getDimensionPixelSize(R.dimen.publish_photo_thumbnail_size);
 
         if (savedInstanceState == null) {
@@ -88,6 +108,7 @@ public class PublishActivity extends BaseActivity {
     }
 
     private void loadThumbnailPhoto() {
+        Log.v("LoadThumbnailPhoto", photoUri.toString());
         ivPhoto.setScaleX(0);
         ivPhoto.setScaleY(0);
         Picasso.with(this)

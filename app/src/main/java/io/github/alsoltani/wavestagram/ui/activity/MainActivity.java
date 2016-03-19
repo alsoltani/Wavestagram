@@ -2,19 +2,27 @@ package io.github.alsoltani.wavestagram.ui.activity;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
+import android.provider.MediaStore;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.animation.OvershootInterpolator;
 import android.database.sqlite.SQLiteDatabase;
+
+import java.io.File;
+import java.io.IOException;
 
 import butterknife.Bind;
 import butterknife.OnClick;
@@ -30,6 +38,9 @@ import io.github.alsoltani.wavestagram.database.DatabaseHandler;
 public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFeedItemClickListener,
         FeedContextMenu.OnFeedContextMenuItemClickListener {
     public static final String ACTION_SHOW_LOADING_ITEM = "action_show_loading_item";
+    public static final String galleryPath = System.getenv("SECONDARY_STORAGE")
+            + "/" + Environment.DIRECTORY_PICTURES +
+            "/Wavestagram/";
 
     private static final int ANIM_DURATION_TOOLBAR = 300;
     private static final int ANIM_DURATION_FAB = 400;
@@ -164,17 +175,65 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
     }
 
     @Override
+    public void onCancelClick(int feedItem) {
+        FeedContextMenuManager.getInstance().hideContextMenu();
+    }
+
+
+    @Override
     public void onDeleteClick(int feedItem) {
         FeedContextMenuManager.getInstance().hideContextMenu();
+        DatabaseHandler handler = DatabaseHandler.getInstance(this);
 
-        //DatabaseHandler handler = DatabaseHandler.getInstance(this);
+        // Remove item from ArrayList.
+        //TODO: Check if works.
+        feedAdapter.feedItems.remove(feedItem);
+
+        // Delete from database, and from picture folder, by id.
+        // Remind that pictures are stored in reverse order.
+        int length = handler.getNumberRows();
+        String fileNameToDelete = handler.deleteFile(length - feedItem);
+
+        Log.v("feedItem", String.valueOf(feedItem));
+        Log.v("Deletion", fileNameToDelete);
+        if (!fileNameToDelete.equals("none")){
+            new File(galleryPath + fileNameToDelete).delete();
+
+            // Use MediaScanner to refresh the gallery.
+            deleteFileFromMediaStore(getContentResolver(), new File(galleryPath + fileNameToDelete));
+        }
+
+        //Notify changes to feed.
+        //TODO: Check if works.
+
+        feedAdapter.notifyDataSetChanged();
+        feedAdapter.notifyItemRemoved(feedItem);
+        feedAdapter.notifyItemRangeChanged(feedItem, length);
+
+        setContentView(R.layout.activity_main);
+        setupFeed();
+        feedAdapter.updateItems(false);
 
         showDeletedSnackbar();
     }
 
-    @Override
-    public void onCancelClick(int feedItem) {
-        FeedContextMenuManager.getInstance().hideContextMenu();
+    public static void deleteFileFromMediaStore(final ContentResolver contentResolver, final File file) {
+        String canonicalPath;
+        try {
+            canonicalPath = file.getCanonicalPath();
+        } catch (IOException e) {
+            canonicalPath = file.getAbsolutePath();
+        }
+        final Uri uri = MediaStore.Files.getContentUri("external");
+        final int result = contentResolver.delete(uri,
+                MediaStore.Files.FileColumns.DATA + "=?", new String[] {canonicalPath});
+        if (result == 0) {
+            final String absolutePath = file.getAbsolutePath();
+            if (!absolutePath.equals(canonicalPath)) {
+                contentResolver.delete(uri,
+                        MediaStore.Files.FileColumns.DATA + "=?", new String[]{absolutePath});
+            }
+        }
     }
 
     @OnClick(R.id.btnCreate)

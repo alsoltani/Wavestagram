@@ -10,7 +10,7 @@ import butterknife.ButterKnife;
 import io.github.alsoltani.wavestagram.R;
 
 /**
- * Created by alsoltani_mcs on 11.11.14.
+ * Created by alsoltani on 11.11.14.
  */
 public class PhotoFiltersAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 

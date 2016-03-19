@@ -18,19 +18,10 @@
             android:elevation="@dimen/default_elevation"
             android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
-            <ImageButton
-                android:id="@+id/btnBackPublished"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_alignParentLeft="true"
-                android:layout_alignParentStart="true"
-                android:background="@drawable/btn_default_light"
-                android:src="@drawable/ic_arrow_back_grey600_24dp" />
-
             <TextView
                 android:layout_width="fill_parent"
                 android:layout_height="fill_parent"
-                android:gravity="left"
+                android:gravity="center"
                 android:paddingLeft="0dp"
                 android:paddingStart="0dp"
                 android:paddingEnd="48dp"

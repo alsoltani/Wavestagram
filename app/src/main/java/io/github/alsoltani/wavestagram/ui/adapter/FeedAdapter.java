@@ -31,6 +31,7 @@ import butterknife.Bind;
 import butterknife.ButterKnife;
 import io.github.alsoltani.wavestagram.R;
 import io.github.alsoltani.wavestagram.database.DatabaseHandler;
+import io.github.alsoltani.wavestagram.ui.activity.MainActivity;
 import io.github.alsoltani.wavestagram.ui.view.LoadingFeedItemView;
 
 /**
@@ -41,7 +42,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public static final int VIEW_TYPE_DEFAULT = 1;
     public static final int VIEW_TYPE_LOADER = 2;
 
-    private final List<FeedItem> feedItems = new ArrayList<>();
+    public final List<FeedItem> feedItems = new ArrayList<>();
 
     private Context context;
     private CursorAdapter cursorAdapter;
@@ -223,7 +224,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public void updateItems(boolean animated) {
 
         DatabaseHandler handler = DatabaseHandler.getInstance(context);
-        int length = handler.GetNumberRows();
+        int length = handler.getNumberRows();
 
         List<FeedItem> updateList = new ArrayList<FeedItem>(
                 Collections.nCopies(length, new FeedItem("Image 1", "fileName 1")));
@@ -269,13 +270,9 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             this.feedItem = feedItem;
             int adapterPosition = cursor.getPosition();
-            //TODO: Avoid hardcoding the galleryPath
 
-            String galleryPath = System.getenv("SECONDARY_STORAGE")
-            + "/" + Environment.DIRECTORY_PICTURES +
-            "/Wavestagram/";
-
-            Bitmap bmImage = BitmapFactory.decodeFile(galleryPath + cursor.getString(cursor.getColumnIndex("fileName")));
+            Bitmap bmImage = BitmapFactory.decodeFile(
+                    MainActivity.galleryPath + cursor.getString(cursor.getColumnIndex("fileName")));
             ivFeedCenter.setImageBitmap(bmImage);
             //ivFeedCenter.setImageResource(adapterPosition % 2 == 0 ? R.drawable.img_feed_center_1 : R.drawable.img_feed_center_2);
             ivFeedName.setText(cursor.getString(cursor.getColumnIndex("name")));

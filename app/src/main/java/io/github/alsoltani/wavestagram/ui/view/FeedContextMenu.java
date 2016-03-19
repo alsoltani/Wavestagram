@@ -9,9 +9,10 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import io.github.alsoltani.wavestagram.R;
 import io.github.alsoltani.wavestagram.Utils;
+import io.github.alsoltani.wavestagram.ui.adapter.FeedAdapter;
 
 /**
- * Created by alsoltani_mcs on 15.12.14.
+ * Created by alsoltani on 15.12.14.
  */
 public class FeedContextMenu extends LinearLayout {
     private static final int CONTEXT_MENU_WIDTH = Utils.dpToPx(240);

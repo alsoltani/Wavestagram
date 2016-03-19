@@ -5,7 +5,7 @@ import android.app.Application;
 import timber.log.Timber;
 
 /**
- * Created by alsoltani_mcs on 05.11.14.
+ * Created by alsoltani on 05.11.14.
  */
 public class WavestagramApplication extends Application {
     @Override

@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.hardware.Camera;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,12 +34,15 @@ import com.commonsware.cwac.camera.CameraView;
 import com.commonsware.cwac.camera.PictureTransaction;
 import com.commonsware.cwac.camera.SimpleCameraHost;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 
 import butterknife.Bind;
 import butterknife.OnClick;
 import io.github.alsoltani.wavestagram.R;
 import io.github.alsoltani.wavestagram.Utils;
+import io.github.alsoltani.wavestagram.database.DatabaseHandler;
 import io.github.alsoltani.wavestagram.ui.adapter.PhotoFiltersAdapter;
 import io.github.alsoltani.wavestagram.ui.view.RevealBackgroundView;
 
@@ -168,7 +172,15 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
             btnTakePhoto.setEnabled(true);
             vUpperPanel.showNext();
             vLowerPanel.showNext();
+
+            //If not keeping the picture, delete it.
+            String fileName = Uri.fromFile(photoPath).toString();
+            Log.v("PhotoPath", fileName);
+            photoPath.delete();
+
+            DatabaseHandler handler = DatabaseHandler.getInstance(this);
             updateState(STATE_TAKE_PHOTO);
+
         } else {
             super.onBackPressed();
         }
@@ -229,16 +241,14 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
         //so that MyCameraHost uses the dedicated dir to store images.
 
         private void initPhotoDirectory() {
-            photoDirectory = new File(System.getenv("SECONDARY_STORAGE")
-                    + "/" + Environment.DIRECTORY_PICTURES +
-                    "/Wavestagram/");
+            photoDirectory = new File(MainActivity.galleryPath);
         }
 
         protected File getPhotoPath() {
             File dir = getPhotoDirectory();
             dir.mkdirs();
 
-        return(new File(dir, getPhotoFilename()));
+            return (new File(dir, getPhotoFilename()));
         }
 
         protected File getPhotoDirectory() {
@@ -246,7 +256,7 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
                 initPhotoDirectory();
             }
 
-        return(photoDirectory);
+            return (photoDirectory);
         }
 
         public MyCameraHost(Context ctxt) {
@@ -285,6 +295,21 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
             super.saveImage(xact, image);
             photoPath = getPhotoPath();
 
+            if (photoPath.exists()) {
+                photoPath.delete();
+            }
+
+            try {
+                FileOutputStream fos = new FileOutputStream(photoPath.getPath());
+                BufferedOutputStream bos = new BufferedOutputStream(fos);
+
+                bos.write(image);
+                bos.flush();
+                fos.getFD().sync();
+                bos.close();
+            } catch (java.io.IOException e) {
+                handleException(e);
+            }
         }
     }
 
