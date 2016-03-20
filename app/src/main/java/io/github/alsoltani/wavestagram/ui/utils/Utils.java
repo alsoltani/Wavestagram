@@ -1,4 +1,4 @@
-package io.github.alsoltani.wavestagram;
+package io.github.alsoltani.wavestagram.ui.utils;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -7,9 +7,6 @@ import android.os.Build;
 import android.view.Display;
 import android.view.WindowManager;
 
-/**
- * Created by alsoltani on 05.11.14.
- */
 public class Utils {
     private static int screenWidth = 0;
     private static int screenHeight = 0;

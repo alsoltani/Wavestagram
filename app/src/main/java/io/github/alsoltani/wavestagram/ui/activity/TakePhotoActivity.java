@@ -10,12 +10,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.hardware.Camera;
-import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -28,6 +28,9 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ViewSwitcher;
 
+import boofcv.alg.misc.GImageMiscOps;
+import boofcv.android.ConvertBitmap;
+
 import com.commonsware.cwac.camera.CameraHost;
 import com.commonsware.cwac.camera.CameraHostProvider;
 import com.commonsware.cwac.camera.CameraView;
@@ -37,18 +40,22 @@ import com.commonsware.cwac.camera.SimpleCameraHost;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Random;
 
+import boofcv.android.ImplConvertBitmap;
+import boofcv.struct.image.ImageFloat32;
+import boofcv.struct.image.MultiSpectral;
 import butterknife.Bind;
 import butterknife.OnClick;
 import io.github.alsoltani.wavestagram.R;
-import io.github.alsoltani.wavestagram.Utils;
-import io.github.alsoltani.wavestagram.database.DatabaseHandler;
+import io.github.alsoltani.wavestagram.ui.utils.Utils;
 import io.github.alsoltani.wavestagram.ui.adapter.PhotoFiltersAdapter;
 import io.github.alsoltani.wavestagram.ui.view.RevealBackgroundView;
 
-/**
- * Created by Miroslaw Stanek on 08.02.15.
- */
 public class TakePhotoActivity extends BaseActivity implements RevealBackgroundView.OnStateChangeListener,
         CameraHostProvider {
     public static final String ARG_REVEAL_START_LOCATION = "reveal_start_location";
@@ -57,6 +64,9 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
     private static final Interpolator DECELERATE_INTERPOLATOR = new DecelerateInterpolator();
     private static final int STATE_TAKE_PHOTO = 0;
     private static final int STATE_SETUP_PHOTO = 1;
+    private static final int OUTPUT_ORIGINAL = 0;
+    private static final int OUTPUT_NOISY = 1;
+    private static final int OUTPUT_DENOISED = 2;
 
     @Bind(R.id.vRevealBackground)
     RevealBackgroundView vRevealBackground;
@@ -76,16 +86,40 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
     RecyclerView rvFilters;
     @Bind(R.id.btnTakePhoto)
     Button btnTakePhoto;
+    @Bind(R.id.btnClose)
+    ImageView btnClose;
+
+    CoordinatorLayout clContent;
 
     private boolean pendingIntro;
-    private int currentState;
+    private boolean isGaussian = false;
+    public int currentState;
+    public int outputState;
 
-    private File photoPath;
+    private File originalPath;
+    private File noisyPath;
+    private File denoisedPath;
+
+    public Bitmap originalBitmap;
 
     public static void startCameraFromLocation(int[] startingLocation, Activity startingActivity) {
         Intent intent = new Intent(startingActivity, TakePhotoActivity.class);
         intent.putExtra(ARG_REVEAL_START_LOCATION, startingLocation);
         startingActivity.startActivity(intent);
+    }
+
+    public static File getNoisyPath(File originalPath) {
+        String pathName = originalPath.getName();
+        int i = pathName.contains(".") ? pathName.lastIndexOf('.') : pathName.length();
+        String destName = pathName.substring(0, i) + "_NOISY" + pathName.substring(i);
+        return (new File(MainActivity.galleryPath, destName));
+    }
+
+    public static File getDenoisedPath(File originalPath) {
+        String pathName = originalPath.getName();
+        int i = pathName.contains(".") ? pathName.lastIndexOf('.') : pathName.length();
+        String destName = pathName.substring(0, i) + "_DENOISED" + pathName.substring(i);
+        return (new File(MainActivity.galleryPath, destName));
     }
 
     @Override
@@ -162,8 +196,35 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
 
     @OnClick(R.id.btnAccept)
     public void onAcceptClick() {
-        Log.v("PhotoPath", Uri.fromFile(photoPath).toString());
-        PublishActivity.openWithPhotoUri(this, Uri.fromFile(photoPath));
+        if (currentState == OUTPUT_ORIGINAL) {
+            PublishActivity.openWithPhotoUri(this, Uri.fromFile(originalPath));
+            noisyPath.delete();
+            denoisedPath.delete();
+
+        } else if (currentState == OUTPUT_NOISY) {
+            PublishActivity.openWithPhotoUri(this, Uri.fromFile(noisyPath));
+            originalPath.delete();
+            denoisedPath.delete();
+        } else if (currentState == OUTPUT_DENOISED) {
+            PublishActivity.openWithPhotoUri(this, Uri.fromFile(denoisedPath));
+            originalPath.delete();
+            noisyPath.delete();
+        }
+
+    }
+
+    @OnClick(R.id.btnClose)
+    public void onClosePressed() {
+
+        int[] startingLocation = new int[2];
+        btnClose.getLocationOnScreen(startingLocation);
+
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+
+        startingLocation[0] += btnClose.getWidth() / 2;
+        overridePendingTransition(0, 0);
     }
 
     @OnClick(R.id.btnBack)
@@ -174,15 +235,79 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
             vLowerPanel.showNext();
 
             //If not keeping the picture, delete it.
-            String fileName = Uri.fromFile(photoPath).toString();
-            Log.v("PhotoPath", fileName);
-            photoPath.delete();
 
-            DatabaseHandler handler = DatabaseHandler.getInstance(this);
+            List<File> paths = Arrays.asList(originalPath, noisyPath, denoisedPath);
+
+            for (ListIterator<File> iter = paths.listIterator(); iter.hasNext(); ) {
+
+                File path = iter.next();
+                String fileName = path.getName();
+                Log.v("ShowDeletePath", fileName);
+                path.delete();
+
+                MainActivity.deleteFileFromMediaStore(getContentResolver(), new File(MainActivity.galleryPath + fileName));
+            }
+
             updateState(STATE_TAKE_PHOTO);
 
         } else {
             super.onBackPressed();
+        }
+    }
+
+    @OnClick(R.id.btnGaussian)
+    public void onGaussianClick() {
+
+        if (currentState == STATE_SETUP_PHOTO) {
+            if (!isGaussian) {
+
+                Random rand = new Random(234);
+
+                MultiSpectral<ImageFloat32> noisy = ConvertBitmap.bitmapToMS(originalBitmap, null, ImageFloat32.class, null);
+
+                // Apply Gaussian blur to each band in the image
+                for (int i = 0; i < noisy.getNumBands(); i++) {
+
+                    GImageMiscOps.addGaussian(noisy.getBand(i), rand, 20, 0, 255);
+                }
+
+                Bitmap output = originalBitmap.copy(originalBitmap.getConfig(), true);
+                ImplConvertBitmap.multiToBitmapRGB_F32(noisy, output);
+
+                // Show image.
+                animateShutter();
+                ivTakenPhoto.setImageBitmap(output);
+
+                // Set output state.
+                outputState = OUTPUT_NOISY;
+                isGaussian = true;
+
+                //Save image.
+                FileOutputStream out = null;
+                try {
+                    out = new FileOutputStream(noisyPath);
+                    output.compress(Bitmap.CompressFormat.PNG, 100, out);
+                    // PNG is a lossless format, the compression factor (100) is ignored.
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        if (out != null) {
+                            out.close();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            } else {
+                animateShutter();
+                ivTakenPhoto.setImageBitmap(originalBitmap);
+
+                outputState = OUTPUT_ORIGINAL;
+                isGaussian = false;
+            }
         }
     }
 
@@ -246,7 +371,9 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
 
         protected File getPhotoPath() {
             File dir = getPhotoDirectory();
-            dir.mkdirs();
+            if (!dir.exists()) {
+                dir.mkdir();
+            }
 
             return (new File(dir, getPhotoFilename()));
         }
@@ -287,28 +414,37 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
                 public void run() {
                     showTakenPicture(bitmap);
                 }
+
             });
         }
 
         @Override
         public void saveImage(PictureTransaction xact, byte[] image) {
             super.saveImage(xact, image);
-            photoPath = getPhotoPath();
+            originalPath = getPhotoPath();
+            noisyPath = getNoisyPath(originalPath);
+            denoisedPath = getDenoisedPath(originalPath);
 
-            if (photoPath.exists()) {
-                photoPath.delete();
-            }
+            List<File> paths = Arrays.asList(originalPath, noisyPath, denoisedPath);
 
-            try {
-                FileOutputStream fos = new FileOutputStream(photoPath.getPath());
-                BufferedOutputStream bos = new BufferedOutputStream(fos);
+            for (ListIterator<File> iter = paths.listIterator(); iter.hasNext(); ) {
 
-                bos.write(image);
-                bos.flush();
-                fos.getFD().sync();
-                bos.close();
-            } catch (java.io.IOException e) {
-                handleException(e);
+                File path = iter.next();
+                if (path.exists()) {
+                    path.delete();
+                }
+
+                try {
+                    FileOutputStream fos = new FileOutputStream(path.getPath());
+                    BufferedOutputStream bos = new BufferedOutputStream(fos);
+
+                    bos.write(image);
+                    bos.flush();
+                    fos.getFD().sync();
+                    bos.close();
+                } catch (java.io.IOException e) {
+                    handleException(e);
+                }
             }
         }
     }
@@ -316,6 +452,7 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
     private void showTakenPicture(Bitmap bitmap) {
         vUpperPanel.showNext();
         vLowerPanel.showNext();
+        originalBitmap = bitmap;
         ivTakenPhoto.setImageBitmap(bitmap);
         updateState(STATE_SETUP_PHOTO);
     }
@@ -340,5 +477,9 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
             vLowerPanel.setOutAnimation(this, R.anim.slide_out_to_right);
             ivTakenPhoto.setVisibility(View.VISIBLE);
         }
+    }
+
+    public void showAddingGaussSnackbar() {
+        Snackbar.make(clContent, "Adding Gaussian noise...", Snackbar.LENGTH_SHORT).show();
     }
 }

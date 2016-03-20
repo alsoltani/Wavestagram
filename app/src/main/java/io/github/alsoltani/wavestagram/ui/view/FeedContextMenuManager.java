@@ -9,11 +9,8 @@ import android.view.ViewTreeObserver;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 
-import io.github.alsoltani.wavestagram.Utils;
+import io.github.alsoltani.wavestagram.ui.utils.Utils;
 
-/**
- * Created by alsoltani on 16.12.14.
- */
 public class FeedContextMenuManager extends RecyclerView.OnScrollListener implements View.OnAttachStateChangeListener {
 
     private static FeedContextMenuManager instance;

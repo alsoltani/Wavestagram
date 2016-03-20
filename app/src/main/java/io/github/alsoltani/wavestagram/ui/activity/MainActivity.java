@@ -3,12 +3,10 @@ package io.github.alsoltani.wavestagram.ui.activity;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.content.ContentResolver;
-import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
@@ -27,17 +25,16 @@ import java.io.IOException;
 import butterknife.Bind;
 import butterknife.OnClick;
 import io.github.alsoltani.wavestagram.R;
-import io.github.alsoltani.wavestagram.Utils;
-import io.github.alsoltani.wavestagram.ui.adapter.FeedAdapter;
 import io.github.alsoltani.wavestagram.ui.adapter.FeedItemAnimator;
+import io.github.alsoltani.wavestagram.ui.utils.Utils;
+import io.github.alsoltani.wavestagram.ui.adapter.FeedAdapter;
 import io.github.alsoltani.wavestagram.ui.view.FeedContextMenu;
 import io.github.alsoltani.wavestagram.ui.view.FeedContextMenuManager;
 import io.github.alsoltani.wavestagram.database.DatabaseHandler;
 
-
-public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFeedItemClickListener,
+public class MainActivity extends BaseActivity implements FeedAdapter.OnFeedItemClickListener,
         FeedContextMenu.OnFeedContextMenuItemClickListener {
-    public static final String ACTION_SHOW_LOADING_ITEM = "action_show_loading_item";
+
     public static final String galleryPath = System.getenv("SECONDARY_STORAGE")
             + "/" + Environment.DIRECTORY_PICTURES +
             "/Wavestagram/";
@@ -80,7 +77,6 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
         rvFeed.setLayoutManager(linearLayoutManager);
 
         DatabaseHandler handler = DatabaseHandler.getInstance(this);
-        //DatabaseHandler handler = new DatabaseHandler(this);
         SQLiteDatabase db = handler.getWritableDatabase();
 
         handler.addFileOrPass("File 1", "Picture1.png");
@@ -100,24 +96,6 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
             }
         });
         rvFeed.setItemAnimator(new FeedItemAnimator());
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        if (ACTION_SHOW_LOADING_ITEM.equals(intent.getAction())) {
-            showFeedLoadingItemDelayed();
-        }
-    }
-
-    private void showFeedLoadingItemDelayed() {
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                rvFeed.smoothScrollToPosition(0);
-                feedAdapter.showLoadingView();
-            }
-        }, 500);
     }
 
     @Override
@@ -186,7 +164,6 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
         DatabaseHandler handler = DatabaseHandler.getInstance(this);
 
         // Remove item from ArrayList.
-        //TODO: Check if works.
         feedAdapter.feedItems.remove(feedItem);
 
         // Delete from database, and from picture folder, by id.
@@ -195,8 +172,9 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
         String fileNameToDelete = handler.deleteFile(length - feedItem);
 
         Log.v("feedItem", String.valueOf(feedItem));
-        Log.v("Deletion", fileNameToDelete);
+        Log.v("Deletion", galleryPath + fileNameToDelete);
         if (!fileNameToDelete.equals("none")){
+
             new File(galleryPath + fileNameToDelete).delete();
 
             // Use MediaScanner to refresh the gallery.
@@ -204,8 +182,6 @@ public class MainActivity extends BaseDrawerActivity implements FeedAdapter.OnFe
         }
 
         //Notify changes to feed.
-        //TODO: Check if works.
-
         feedAdapter.notifyDataSetChanged();
         feedAdapter.notifyItemRemoved(feedItem);
         feedAdapter.notifyItemRangeChanged(feedItem, length);

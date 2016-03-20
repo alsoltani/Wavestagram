@@ -3,12 +3,11 @@ package io.github.alsoltani.wavestagram.ui.activity;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
-import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.ToolbarWidgetWrapper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,24 +16,17 @@ import android.view.ViewTreeObserver;
 import android.view.animation.OvershootInterpolator;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.ToggleButton;
-import android.widget.Toolbar;
 
 import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 
 import butterknife.Bind;
-import butterknife.OnCheckedChanged;
-import butterknife.OnClick;
 import io.github.alsoltani.wavestagram.R;
-import io.github.alsoltani.wavestagram.Utils;
+import io.github.alsoltani.wavestagram.ui.utils.Utils;
 import io.github.alsoltani.wavestagram.database.DatabaseHandler;
-
-/**
- * Created by Miroslaw Stanek on 21.02.15.
- */
 
 public class PublishActivity extends BaseActivity {
     public static final String ARG_TAKEN_PHOTO_URI = "arg_taken_photo_uri";
@@ -46,14 +38,15 @@ public class PublishActivity extends BaseActivity {
     @Bind(R.id.toolbar)
     android.support.v7.widget.Toolbar toolbar;
 
-    private boolean propagatingToggleState = false;
     private Uri photoUri;
     private int photoSize;
+    public Bitmap bmThumbnail;
 
     public static void openWithPhotoUri(Activity openingActivity, Uri photoUri) {
         Intent intent = new Intent(openingActivity, PublishActivity.class);
         intent.putExtra(ARG_TAKEN_PHOTO_URI, photoUri);
         openingActivity.startActivity(intent);
+
     }
 
     @Override
@@ -107,7 +100,26 @@ public class PublishActivity extends BaseActivity {
         }
     }
 
+    public File getNewestFileInDirectory() {
+       File newestFile = null;
+
+       // start loop trough files in directory
+       File file = new File(MainActivity.galleryPath);
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+                "MM/dd/yyyy hh:mm:ss");
+       if (newestFile == null || file.lastModified() > newestFile.lastModified()) {
+           newestFile = file;
+       }
+       // end loop trough files in directory
+
+       return newestFile;
+    }
+
     private void loadThumbnailPhoto() {
+
+        //File newestFile = getNewestFileInDirectory();
+        //Uri newestUri = Uri.fromFile(newestFile);
+
         Log.v("LoadThumbnailPhoto", photoUri.toString());
         ivPhoto.setScaleX(0);
         ivPhoto.setScaleY(0);
@@ -156,7 +168,6 @@ public class PublishActivity extends BaseActivity {
     private void bringMainActivityToTop() {
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        intent.setAction(MainActivity.ACTION_SHOW_LOADING_ITEM);
         startActivity(intent);
     }
 

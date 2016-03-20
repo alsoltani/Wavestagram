@@ -14,11 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import io.github.alsoltani.wavestagram.Utils;
+import io.github.alsoltani.wavestagram.ui.utils.Utils;
 
-/**
- * Created by Miroslaw Stanek on 02.12.2015.
- */
 public class FeedItemAnimator extends DefaultItemAnimator {
     private static final DecelerateInterpolator DECCELERATE_INTERPOLATOR = new DecelerateInterpolator();
     private static final AccelerateInterpolator ACCELERATE_INTERPOLATOR = new AccelerateInterpolator();
@@ -52,12 +49,10 @@ public class FeedItemAnimator extends DefaultItemAnimator {
 
     @Override
     public boolean animateAdd(RecyclerView.ViewHolder viewHolder) {
-        if (viewHolder.getItemViewType() == FeedAdapter.VIEW_TYPE_DEFAULT) {
-            if (viewHolder.getLayoutPosition() > lastAddAnimatedItem) {
-                lastAddAnimatedItem++;
-                runEnterAnimation((FeedAdapter.CellFeedViewHolder) viewHolder);
-                return false;
-            }
+        if (viewHolder.getLayoutPosition() > lastAddAnimatedItem) {
+            lastAddAnimatedItem++;
+            runEnterAnimation((FeedAdapter.CellFeedViewHolder) viewHolder);
+            return false;
         }
 
         dispatchAddFinished(viewHolder);
