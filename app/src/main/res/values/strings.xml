@@ -6,6 +6,9 @@
         <item quantity="other">%d likes</item>
     </plurals>
     <string name="user_profile_photo">https://scontent-cdg2-1.cdninstagram.com/t51.2885-19/s150x150/12331380_1677895809145248_1640974978_a.jpg</string>
+    <string-array name="feed_items">
+        <item>http://liyageldman.com/wp-content/uploads/2013/12/IMG_5193.jpg</item>
+    </string-array>
     <string name="publish_header">Publish your message.</string>
     <string name="include_original_image">INCLUDE ORIGINAL IMAGE</string>
 </resources>

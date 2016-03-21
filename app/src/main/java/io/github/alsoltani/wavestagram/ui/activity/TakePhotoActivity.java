@@ -131,6 +131,8 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
         setupRevealBackground(savedInstanceState);
         setupPhotoFilters();
 
+        // Change picture depending on PhotoFilersAdapter's Recycler View here.
+
         vUpperPanel.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
             @Override
             public boolean onPreDraw() {
@@ -169,6 +171,10 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
     }
 
     private void setupPhotoFilters() {
+        //Intent i = new Intent(this, ToClass.class);
+        //i.putExtra("epuzzle", easyPuzzle);
+        //startActivity(i);
+
         PhotoFiltersAdapter photoFiltersAdapter = new PhotoFiltersAdapter(this);
         rvFilters.setHasFixedSize(true);
         rvFilters.setAdapter(photoFiltersAdapter);
@@ -196,16 +202,16 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
 
     @OnClick(R.id.btnAccept)
     public void onAcceptClick() {
-        if (currentState == OUTPUT_ORIGINAL) {
+        if (outputState == OUTPUT_ORIGINAL) {
             PublishActivity.openWithPhotoUri(this, Uri.fromFile(originalPath));
             noisyPath.delete();
             denoisedPath.delete();
 
-        } else if (currentState == OUTPUT_NOISY) {
+        } else if (outputState == OUTPUT_NOISY) {
             PublishActivity.openWithPhotoUri(this, Uri.fromFile(noisyPath));
             originalPath.delete();
             denoisedPath.delete();
-        } else if (currentState == OUTPUT_DENOISED) {
+        } else if (outputState == OUTPUT_DENOISED) {
             PublishActivity.openWithPhotoUri(this, Uri.fromFile(denoisedPath));
             originalPath.delete();
             noisyPath.delete();

@@ -108,7 +108,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
                                                 // Update name in database.
 
-                                                Log.v("AddOrUpdateFile", String.valueOf(cellFeedViewHolder.getAdapterPosition()));
+                                                //Log.v("AddOrUpdateFile", String.valueOf(cellFeedViewHolder.getAdapterPosition()));
 
                                                 DatabaseHandler handler = DatabaseHandler.getInstance(context);
 
@@ -208,7 +208,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             this.feedItem = feedItem;
 
-            Log.v("Decode", cursor.getString(cursor.getColumnIndex("fileName")));
+            //Log.v("Decode", cursor.getString(cursor.getColumnIndex("fileName")));
             Bitmap bmImage = BitmapFactory.decodeFile(
                     MainActivity.galleryPath + cursor.getString(cursor.getColumnIndex("fileName")));
             ivFeedCenter.setImageBitmap(bmImage);

@@ -1,8 +1,5 @@
 package io.github.alsoltani.wavestagram.database;
 
-/**
- * Created by alain on 15/03/16.
- */
 
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -31,11 +28,6 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String KEY_FILENAME = "fileName";
 
     private static final String TAG = "Database Handler";
-
-    public class Picture {
-        public String name;
-        public String fileName;
-    }
 
     public static synchronized DatabaseHandler getInstance(Context context) {
 

@@ -67,6 +67,40 @@ public class MainActivity extends BaseActivity implements FeedAdapter.OnFeedItem
         }
     }
 
+    private void setupGallery() {
+
+        //TODO: Refactor all this !
+
+        File gallery = new File(galleryPath);
+        File[] galleryContents = gallery.listFiles();
+        DatabaseHandler handler = DatabaseHandler.getInstance(this);
+
+        if (!gallery.exists()){
+
+            // The folder doesn't currently exist.
+            gallery.mkdir();
+
+            // Then automatically add picture(s) from the web.
+            //TODO: Add a message to invite the user to add his first picture.
+
+            String[] feedItems = getResources().getStringArray(R.array.feed_items);
+            for (String f: feedItems) {
+                Utils.DownloadImageFromPath(f);
+            }
+            galleryContents = gallery.listFiles();
+
+            for (int i = 0 ; i < galleryContents.length ; i++) {
+                handler.addFileOrPass("File " + String.valueOf(i), galleryContents[i].getName());
+            }
+        }
+
+        if (galleryContents.length > 0 && handler.getNumberRows() == 0) {
+            for (int i = 0 ; i < galleryContents.length ; i++) {
+                handler.addFileOrPass("File " + String.valueOf(i), galleryContents[i].getName());
+            }
+        }
+    }
+
     private void setupFeed() {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this) {
             @Override
@@ -78,11 +112,6 @@ public class MainActivity extends BaseActivity implements FeedAdapter.OnFeedItem
 
         DatabaseHandler handler = DatabaseHandler.getInstance(this);
         SQLiteDatabase db = handler.getWritableDatabase();
-
-        handler.addFileOrPass("File 1", "Picture1.png");
-        handler.addFileOrPass("File 2", "Picture2.png");
-        handler.addFileOrPass("File 3", "Picture3.png");
-        handler.addFileOrPass("File 4", "Picture4.png");
 
         Cursor pictureCursor = db.rawQuery("SELECT * FROM pictureTable ORDER BY _id DESC", null);
 
@@ -171,11 +200,19 @@ public class MainActivity extends BaseActivity implements FeedAdapter.OnFeedItem
         int length = handler.getNumberRows();
         String fileNameToDelete = handler.deleteFile(length - feedItem);
 
-        Log.v("feedItem", String.valueOf(feedItem));
-        Log.v("Deletion", galleryPath + fileNameToDelete);
         if (!fileNameToDelete.equals("none")){
 
             new File(galleryPath + fileNameToDelete).delete();
+
+            //If the picture was a denoised or noisy pic,
+            //also remove the parent image from the gallery.
+            if (fileNameToDelete.toLowerCase().contains("_noisy")) {
+                new File(galleryPath + fileNameToDelete.replace("_NOISY", "")).delete();
+            }
+
+            if (fileNameToDelete.toLowerCase().contains("_denoised")) {
+                new File(galleryPath + fileNameToDelete.replace("_DENOISED", "")).delete();
+            }
 
             // Use MediaScanner to refresh the gallery.
             deleteFileFromMediaStore(getContentResolver(), new File(galleryPath + fileNameToDelete));

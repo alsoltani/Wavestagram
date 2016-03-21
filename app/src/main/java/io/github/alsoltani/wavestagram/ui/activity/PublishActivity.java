@@ -29,6 +29,7 @@ import io.github.alsoltani.wavestagram.ui.utils.Utils;
 import io.github.alsoltani.wavestagram.database.DatabaseHandler;
 
 public class PublishActivity extends BaseActivity {
+
     public static final String ARG_TAKEN_PHOTO_URI = "arg_taken_photo_uri";
 
     @Bind(R.id.ivPhoto)
@@ -41,6 +42,7 @@ public class PublishActivity extends BaseActivity {
     private Uri photoUri;
     private int photoSize;
     public Bitmap bmThumbnail;
+    public int outputState;
 
     public static void openWithPhotoUri(Activity openingActivity, Uri photoUri) {
         Intent intent = new Intent(openingActivity, PublishActivity.class);
@@ -117,10 +119,6 @@ public class PublishActivity extends BaseActivity {
 
     private void loadThumbnailPhoto() {
 
-        //File newestFile = getNewestFileInDirectory();
-        //Uri newestUri = Uri.fromFile(newestFile);
-
-        Log.v("LoadThumbnailPhoto", photoUri.toString());
         ivPhoto.setScaleX(0);
         ivPhoto.setScaleY(0);
         Picasso.with(this)
