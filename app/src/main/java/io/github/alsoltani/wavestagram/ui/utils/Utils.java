@@ -57,7 +57,7 @@ public class Utils {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
     }
 
-    public static void DownloadImageFromPath(String path) {
+    public static void downloadImageFromPath(String path) {
 
         InputStream in = null;
         Bitmap bmp = null;
@@ -78,9 +78,12 @@ public class Utils {
 
                 String fileName = path.substring(path.lastIndexOf('/') + 1, path.length());
                 File file = new File(MainActivity.galleryPath, fileName);
+                if (!new File(MainActivity.galleryPath).exists()) {
+                    new File(MainActivity.galleryPath).mkdir();
+                }
                 FileOutputStream fOut = new FileOutputStream(file);
 
-                bmp.compress(Bitmap.CompressFormat.PNG, 85, fOut);
+                bmp.compress(Bitmap.CompressFormat.PNG, 100, fOut);
                 fOut.flush();
                 fOut.close();
             }
@@ -88,5 +91,27 @@ public class Utils {
         } catch (Exception ex) {
             Log.e("Exception", ex.toString());
         }
+    }
+
+    public static void saveBitmapToPath(File file, Bitmap output) {
+
+        FileOutputStream out = null;
+        try {
+            out = new FileOutputStream(file);
+            output.compress(Bitmap.CompressFormat.PNG, 100, out);
+            // PNG is a lossless format, the compression factor (100) is ignored.
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 }

@@ -3,6 +3,7 @@ package io.github.alsoltani.wavestagram.ui.activity;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.content.ContentResolver;
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -57,6 +58,13 @@ public class MainActivity extends BaseActivity implements FeedAdapter.OnFeedItem
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.v("GalleryPath", galleryPath);
+        //setupGallery();
+
+        File gallery = new File(galleryPath);
+        File[] galleryContents = gallery.listFiles();
+        DatabaseHandler handler = DatabaseHandler.getInstance(this);
+        setupGallery();
 
         setupFeed();
 
@@ -85,18 +93,19 @@ public class MainActivity extends BaseActivity implements FeedAdapter.OnFeedItem
 
             String[] feedItems = getResources().getStringArray(R.array.feed_items);
             for (String f: feedItems) {
-                Utils.DownloadImageFromPath(f);
+                Utils.downloadImageFromPath(f);
             }
             galleryContents = gallery.listFiles();
 
-            for (int i = 0 ; i < galleryContents.length ; i++) {
-                handler.addFileOrPass("File " + String.valueOf(i), galleryContents[i].getName());
+            //for (int i = 0 ; i < galleryContents.length ; i++) {
+            for (int i = 0 ; i < feedItems.length; i++) {
+                handler.addFileOrPass("File " + String.valueOf(i + 1), galleryContents[i].getName());
             }
         }
 
         if (galleryContents.length > 0 && handler.getNumberRows() == 0) {
             for (int i = 0 ; i < galleryContents.length ; i++) {
-                handler.addFileOrPass("File " + String.valueOf(i), galleryContents[i].getName());
+                handler.addFileOrPass("File " + String.valueOf(i + 1), galleryContents[i].getName());
             }
         }
     }

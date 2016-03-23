@@ -28,6 +28,9 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ViewSwitcher;
 
+import boofcv.abst.denoise.FactoryImageDenoise;
+import boofcv.abst.denoise.WaveletDenoiseFilter;
+import boofcv.alg.filter.blur.BlurImageOps;
 import boofcv.alg.misc.GImageMiscOps;
 import boofcv.android.ConvertBitmap;
 
@@ -92,15 +95,16 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
     CoordinatorLayout clContent;
 
     private boolean pendingIntro;
-    private boolean isGaussian = false;
+    public boolean isGaussian = false;
+    public boolean isDenoised = false;
     public int currentState;
-    public int outputState;
 
     private File originalPath;
     private File noisyPath;
     private File denoisedPath;
 
     public Bitmap originalBitmap;
+    public Bitmap noisyBitmap = originalBitmap;
 
     public static void startCameraFromLocation(int[] startingLocation, Activity startingActivity) {
         Intent intent = new Intent(startingActivity, TakePhotoActivity.class);
@@ -131,8 +135,6 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
         setupRevealBackground(savedInstanceState);
         setupPhotoFilters();
 
-        // Change picture depending on PhotoFilersAdapter's Recycler View here.
-
         vUpperPanel.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
             @Override
             public boolean onPreDraw() {
@@ -143,6 +145,9 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
                 return true;
             }
         });
+
+        // Change picture depending on PhotoFilersAdapter's Recycler View here.
+        //switchDenoisedImage();
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -171,14 +176,53 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
     }
 
     private void setupPhotoFilters() {
-        //Intent i = new Intent(this, ToClass.class);
-        //i.putExtra("epuzzle", easyPuzzle);
-        //startActivity(i);
 
         PhotoFiltersAdapter photoFiltersAdapter = new PhotoFiltersAdapter(this);
+
         rvFilters.setHasFixedSize(true);
         rvFilters.setAdapter(photoFiltersAdapter);
         rvFilters.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        if (currentState == STATE_SETUP_PHOTO) {
+            if (intent.getStringExtra("isDenoised").equals("false")) {
+
+                MultiSpectral<ImageFloat32> noisyMulti = ConvertBitmap.bitmapToMS(noisyBitmap, null, ImageFloat32.class, null);
+                MultiSpectral<ImageFloat32> denoisedMulti = noisyMulti.createSameShape();
+
+                // How many levels in wavelet transform
+                int numLevels = 6;
+
+                // Create the noise removal algorithm
+                WaveletDenoiseFilter<ImageFloat32> denoiser =
+                        FactoryImageDenoise.waveletVisu(ImageFloat32.class, numLevels, 0, 255);
+
+                // Apply Gaussian blur to each band in the image
+                for (int i = 0; i < noisyMulti.getNumBands(); i++) {
+                    //BlurImageOps.gaussian(noisy.getBand(i), denoised.getBand(i), -1, 5, null);
+                    denoiser.process(noisyMulti.getBand(i), denoisedMulti.getBand(i));
+                }
+
+                Bitmap denoisedBitmap = noisyBitmap.copy(noisyBitmap.getConfig(), true);
+                ImplConvertBitmap.multiToBitmapRGB_F32(denoisedMulti, denoisedBitmap);
+
+                // Show image. Set output state.
+                animateShutter();
+                ivTakenPhoto.setImageBitmap(denoisedBitmap);
+                isDenoised = true;
+
+                //Save image.
+                Utils.saveBitmapToPath(denoisedPath, denoisedBitmap);
+
+            } else {
+                animateShutter();
+                ivTakenPhoto.setImageBitmap(originalBitmap);
+                isDenoised = false;
+                Utils.saveBitmapToPath(originalPath, originalBitmap);
+            }
+        }
     }
 
     @Override
@@ -202,21 +246,33 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
 
     @OnClick(R.id.btnAccept)
     public void onAcceptClick() {
-        if (outputState == OUTPUT_ORIGINAL) {
-            PublishActivity.openWithPhotoUri(this, Uri.fromFile(originalPath));
-            noisyPath.delete();
-            denoisedPath.delete();
-
-        } else if (outputState == OUTPUT_NOISY) {
-            PublishActivity.openWithPhotoUri(this, Uri.fromFile(noisyPath));
-            originalPath.delete();
-            denoisedPath.delete();
-        } else if (outputState == OUTPUT_DENOISED) {
+        if (isDenoised) {
             PublishActivity.openWithPhotoUri(this, Uri.fromFile(denoisedPath));
+
             originalPath.delete();
             noisyPath.delete();
-        }
 
+            MainActivity.deleteFileFromMediaStore(getContentResolver(), originalPath);
+            MainActivity.deleteFileFromMediaStore(getContentResolver(), noisyPath);
+
+        } else if (isGaussian) {
+            PublishActivity.openWithPhotoUri(this, Uri.fromFile(noisyPath));
+
+            originalPath.delete();
+            denoisedPath.delete();
+
+            MainActivity.deleteFileFromMediaStore(getContentResolver(), originalPath);
+            MainActivity.deleteFileFromMediaStore(getContentResolver(), denoisedPath);
+
+        } else {
+            PublishActivity.openWithPhotoUri(this, Uri.fromFile(originalPath));
+
+            noisyPath.delete();
+            denoisedPath.delete();
+
+            MainActivity.deleteFileFromMediaStore(getContentResolver(), noisyPath);
+            MainActivity.deleteFileFromMediaStore(getContentResolver(), denoisedPath);
+        }
     }
 
     @OnClick(R.id.btnClose)
@@ -268,51 +324,31 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
             if (!isGaussian) {
 
                 Random rand = new Random(234);
-
-                MultiSpectral<ImageFloat32> noisy = ConvertBitmap.bitmapToMS(originalBitmap, null, ImageFloat32.class, null);
+                MultiSpectral<ImageFloat32> noisyMulti = ConvertBitmap.bitmapToMS(originalBitmap, null, ImageFloat32.class, null);
 
                 // Apply Gaussian blur to each band in the image
-                for (int i = 0; i < noisy.getNumBands(); i++) {
-
-                    GImageMiscOps.addGaussian(noisy.getBand(i), rand, 20, 0, 255);
+                for (int i = 0; i < noisyMulti.getNumBands(); i++) {
+                    GImageMiscOps.addGaussian(noisyMulti.getBand(i), rand, 20, 0, 255);
                 }
 
-                Bitmap output = originalBitmap.copy(originalBitmap.getConfig(), true);
-                ImplConvertBitmap.multiToBitmapRGB_F32(noisy, output);
+                noisyBitmap = originalBitmap.copy(originalBitmap.getConfig(), true);
+                ImplConvertBitmap.multiToBitmapRGB_F32(noisyMulti, noisyBitmap);
 
-                // Show image.
+                // Show image. Set output state.
                 animateShutter();
-                ivTakenPhoto.setImageBitmap(output);
-
-                // Set output state.
-                outputState = OUTPUT_NOISY;
+                ivTakenPhoto.setImageBitmap(noisyBitmap);
                 isGaussian = true;
 
                 //Save image.
-                FileOutputStream out = null;
-                try {
-                    out = new FileOutputStream(noisyPath);
-                    output.compress(Bitmap.CompressFormat.PNG, 100, out);
-                    // PNG is a lossless format, the compression factor (100) is ignored.
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        if (out != null) {
-                            out.close();
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
+                Utils.saveBitmapToPath(noisyPath, noisyBitmap);
 
             } else {
+                noisyBitmap = originalBitmap;
                 animateShutter();
                 ivTakenPhoto.setImageBitmap(originalBitmap);
-
-                outputState = OUTPUT_ORIGINAL;
                 isGaussian = false;
+
+                Utils.saveBitmapToPath(originalPath, originalBitmap);
             }
         }
     }
@@ -483,9 +519,5 @@ public class TakePhotoActivity extends BaseActivity implements RevealBackgroundV
             vLowerPanel.setOutAnimation(this, R.anim.slide_out_to_right);
             ivTakenPhoto.setVisibility(View.VISIBLE);
         }
-    }
-
-    public void showAddingGaussSnackbar() {
-        Snackbar.make(clContent, "Adding Gaussian noise...", Snackbar.LENGTH_SHORT).show();
     }
 }

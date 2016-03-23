@@ -102,21 +102,6 @@ public class PublishActivity extends BaseActivity {
         }
     }
 
-    public File getNewestFileInDirectory() {
-       File newestFile = null;
-
-       // start loop trough files in directory
-       File file = new File(MainActivity.galleryPath);
-        SimpleDateFormat dateFormat = new SimpleDateFormat(
-                "MM/dd/yyyy hh:mm:ss");
-       if (newestFile == null || file.lastModified() > newestFile.lastModified()) {
-           newestFile = file;
-       }
-       // end loop trough files in directory
-
-       return newestFile;
-    }
-
     private void loadThumbnailPhoto() {
 
         ivPhoto.setScaleX(0);

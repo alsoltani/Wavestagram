@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.jakewharton.hugo'
 
 android {
     compileSdkVersion 23
@@ -28,7 +27,6 @@ dependencies {
     compile 'com.squareup.picasso:picasso:2.5.2'
     compile 'com.commonsware.cwac:camera:0.7.+'
     ['io','android'].each { String a -> compile group: 'org.boofcv', name: a, version: '0.22' }
-    //compile files('libs/boofcv-v0.22-libs/BoofCV-android-0.22.jar')
 }
 
 configurations {
